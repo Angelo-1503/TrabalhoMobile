@@ -2,6 +2,7 @@ import { AlunoDAO } from "../daos/AlunoDAO";
 import { PlanoDAO } from "../daos/PlanoDAO";
 import { AppError, NaoEncontradoError } from "../errors/AppError";
 import type { AlunoAtualizarInput, AlunoCriarInput } from "../validators/schemas";
+import { removerUpload } from "../utils/arquivos";
 import { AuthService } from "./AuthService";
 
 type AlunoBanco = NonNullable<Awaited<ReturnType<typeof AlunoDAO.buscarPorId>>>;
@@ -46,12 +47,15 @@ export const AlunoService = {
   },
 
   async atualizarFoto(id: number, arquivo: string) {
-    await this.buscar(id);
-    return formatarAluno(await AlunoDAO.atualizarFoto(id, arquivo));
+    const anterior = await this.buscar(id);
+    const aluno = formatarAluno(await AlunoDAO.atualizarFoto(id, arquivo));
+    await removerUpload(anterior.foto);
+    return aluno;
   },
 
   async excluir(id: number) {
     const aluno = await this.buscar(id);
     await AlunoDAO.excluir(aluno.usuarioId);
+    await removerUpload(aluno.foto);
   },
 };

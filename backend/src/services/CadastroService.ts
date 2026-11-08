@@ -4,6 +4,7 @@ import { PagamentoDAO } from "../daos/PagamentoDAO";
 import { PlanoDAO } from "../daos/PlanoDAO";
 import { TreinoDAO } from "../daos/TreinoDAO";
 import { AppError, NaoEncontradoError } from "../errors/AppError";
+import { removerUpload } from "../utils/arquivos";
 import type { ExercicioInput, PagamentoInput, PlanoInput, TreinoInput } from "../validators/schemas";
 
 // Regras de negócio dos cadastros de Planos, Exercícios, Treinos e Pagamentos.
@@ -39,16 +40,19 @@ export const ExercicioService = {
     return ExercicioDAO.atualizar(id, dados);
   },
   async atualizarImagem(id: number, arquivo: string) {
-    await this.buscar(id);
-    return ExercicioDAO.atualizarImagem(id, arquivo);
+    const anterior = await this.buscar(id);
+    const exercicio = await ExercicioDAO.atualizarImagem(id, arquivo);
+    await removerUpload(anterior.imagem);
+    return exercicio;
   },
   async excluir(id: number) {
-    await this.buscar(id);
+    const exercicio = await this.buscar(id);
     const usos = await ExercicioDAO.contarUsoEmTreinos(id);
     if (usos > 0) {
       throw new AppError(`Este exercício está em ${usos} treino(s). Remova-o dos treinos ou desative-o.`, 409);
     }
     await ExercicioDAO.excluir(id);
+    await removerUpload(exercicio.imagem);
   },
 };
 
